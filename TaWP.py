@@ -271,6 +271,7 @@ filename = args.output
 # header - random.choice randomly chooses header
 print("Welcome to TaWP")
 print(choice(header))
+print("")
 
 # fill out basic info if not filled in arguments
 if not fname:
