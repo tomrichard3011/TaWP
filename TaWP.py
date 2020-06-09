@@ -185,13 +185,29 @@ def alpha_check(string):
 
 
 # dob validity check
-def num_check(num):
-    filter_list = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '/']
-    test_str = ''.join(filter(lambda k: k not in filter_list, dob))
-    if len(num) != 10:
-        return True
-    return str(test_str)
+def date_check(date):
+    '''
+    Checks if date string is valid (numerically, not logically)
+    @param <string> date: The string to be checked
+    return: True if valid, false if not
+    '''
 
+    # Check length first
+    if len(date) != 10:
+        return False
+
+    # Check if the correct format is used
+    filter_list = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+    format = iter('XX/XX/XXXX')
+    date_iter = iter(date)
+    for i in range(10):
+        if(next(format) == '/'):
+            if(next(date_iter) != '/'):
+                return False
+        else:
+            if not (next(date_iter) in filter_list):
+                return False
+    return True
 
 # character replace, return array with words with each possible combination - transformation accepts tuple with char as key and array value
 def char_transform(string, transformation):
@@ -327,7 +343,7 @@ if not alpha_check(fname):
 if not alpha_check(lname):
     print("Invalid surname - Only alphabetical characters")
     exit()
-if num_check(dob):
+if not date_check(dob):
     print("Invalid Date - check format")
     exit()
 #############################################################################################################
