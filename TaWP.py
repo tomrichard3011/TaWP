@@ -39,7 +39,7 @@ case_set = {
     'y': ['y', 'Y'],
     'z': ['z', 'Z'],
 }
-# leet transformation tuples
+# leet transformation dictionaries
 leet_1 = {
     'a': ['a', '4'],
     'e': ['e', '3'],
@@ -268,12 +268,15 @@ filename = args.output
 
 # header - random.choice randomly chooses header
 print("Welcome to TaWP")
-print(choice(header))
+# print(choice(header))
 print("")
 
 # fill out basic info if not filled in arguments
 if not fname:
     fname = input('Enter first name: ')
+    # Exiting early, helps with debugging
+    if not fname:
+        exit()
 if not lname:
     lname = input('Enter Surname: ')
 if not dob:
@@ -282,8 +285,8 @@ if not info:
     info = input('Enter any extra words separated by a comma: ')
 if leet_num == 0:
     leet_num = int(input("Enter leet level, 0 for none, 3 is max (may cause memory issues). 2 is suggested: "))
-    while 0 > leet_num > 3:
-        leet_num = input("Invalid leet level, enter a number between 0 and 3: ")
+    while leet_num < 0 or leet_num > 3:
+        leet_num = int(input("Invalid leet level, enter a number between 0 and 3: "))
 if not args.min:
     args.min = input("Enter minimum character length: ")
     if args.min == "":
