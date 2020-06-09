@@ -2,7 +2,6 @@ import argparse
 import itertools
 import time
 from random import choice
-from typing import Dict, List
 
 """
 TaWP - Targeted - Wordlist - Project
@@ -41,7 +40,7 @@ case_set = {
     'z': ['z', 'Z'],
 }
 # leet transformation tuples
-leet_1: Dict[str, List[str]] = {
+leet_1 = {
     'a': ['a', '4'],
     'e': ['e', '3'],
     'i': ['i', '1'],
@@ -200,7 +199,7 @@ def char_transform(string, transformation):
     char = list(string)
     new_list = []
     if len(string) > 8 and transformation == leet_3:
-        print("Name is too long for !")
+        print("Name is too long for this leet level!")
         exit()
     # relate char to leet equivalent in map
     for j in range(len(string)):
@@ -220,7 +219,11 @@ def cart_prod(arr):
     temp_list = [arr, arr]
     for t in itertools.product(*temp_list):
         new_word = ("".join(list(t)))
-        if int(args.min) <= len(new_word) <= int(args.max):
+        if len(new_word) < int(args.min):
+            continue
+        elif len(new_word) >= int(args.max):
+            new_list.append(new_word[:int(args.max)])
+        else:
             new_list.append(new_word)
     return new_list
 
