@@ -130,12 +130,7 @@ __\u001b[36m/\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\u001b[37m___________________\u001b[3
   | | / _` || |/\\| ||  __/ 
   | || (_| |\\  /\\  /| |    
   \\_/ \\__,_| \\/  \\/ \\_|                                           
-""" + "\u001b[0m", "\u001b[37m" + """
-MDEwMTAxMDAgMDExMDAwMDEgMDEwMTAxMTEgMDEwMTAwMDA=
-01010100 01100001 01010111 01010000
-   54       61       57       50
-   T        a        W        P\u001b[0m
-""", """
+""" + "\u001b[0m", """
 _        ______  _____    ____    _     ___\u001b[34m
 (__    __)    /  \\    |  |    |  | |    \\  
    |  |      /    \\   |  |    |  | |     ) 
@@ -283,7 +278,9 @@ if not dob:
 if not info:
     info = input('Enter any extra words separated by a comma: ')
 if leet_num == 0:
-    leet_num = input("Enter leet level, 0 for none, 3 is max (may cause memory issues. 2 is suggested: ")
+    leet_num = int(input("Enter leet level, 0 for none, 3 is max (may cause memory issues). 2 is suggested: "))
+    while 0 > leet_num > 3:
+        leet_num = input("Invalid leet level, enter a number between 0 and 3: ")
 if not args.min:
     args.min = input("Enter minimum character length: ")
     if args.min == "":
@@ -371,7 +368,6 @@ word_array = set(filter(lambda x: x != "", word_array))
 # write to file
 if not filename:
     filename = fname + lname + "_wordlist.txt"
-
 
 # create file with write permissions
 file = open(filename, "w+")
