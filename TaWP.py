@@ -284,7 +284,18 @@ filename = args.output
 
 # header - random.choice randomly chooses header
 print("Welcome to TaWP")
-# print(choice(header))
+
+# Header fix, prevents error when trying to load without charmap
+repeat = True
+while repeat:
+    try:
+        label = choice(header)
+        print(label)
+        repeat = False
+    except UnicodeEncodeError:
+        header.remove(label)
+        repeat = True
+print(choice(label))
 print("")
 
 # fill out basic info if not filled in arguments
