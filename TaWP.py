@@ -180,9 +180,22 @@ ___\u001b[34m|  |\u001b[0m____\u001b[34m|  (\u001b[0m__\u001b[34m)  |\u001b[0m__
 #############################################################################################################
 # alpha validity check
 def alpha_check(string):
+    '''
+    Returns a string with only alphabetical characters
+    @param <string> string: The string that's being checked
+    return: The string with only alphabetical characters
+    '''
+    # Fix alpha check, not too sure how the original was supposed to work
+    '''
     test_str = ''.join(filter(str.isalpha, string))
     return test_str
-
+    '''
+    # Treat the string as a list and remove the non-alphabetical characters O(n)
+    test_str = ''
+    for c in string:
+        if(c.isalpha()):
+            test_str += c
+    return test_str
 
 # dob validity check
 def date_check(date):
