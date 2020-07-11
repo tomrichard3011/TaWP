@@ -1,12 +1,31 @@
 import argparse
 import itertools
 import time
+import tempfile
 from random import choice
 
 """
 TaWP - Targeted - Wordlist - Project
 
 Takes biographical information and creates a wordlist
+"""
+"""
+TODO:
+Main-Issue:
+Algorithm can generated passwords, but it's kind of hard to check if it did it correctly. We need to build some test cases.
+This is designed to have output similar to the original, but note that the lists with larger leet and strings can be very long.
+Perhaps there's a way to cut this down.
+
+Sub-Issues:
+cart_prod and chunk_cart_prod follow strange rules in mixing up the characters. Some teaks were made, but more needs to be done.
+File writing is inefficient (last step is copying file from temp). This is done to make switching the order of functions easier, but not faster.
+Algorithm could be better optimized, namely to avoid repeats. Check at end is performed to prevent consecutive repeats, but slows down and doesn't check everything
+Algorithm behaves strangely towards the minimum string size. Most end up towards the upper end, likely due to cart_prod and chunk_cart_prod
+Passwords generated don't always abide by the rules of passwords (Needs at least one upper, lower, digit, special char, etc.)
+Variable scope can be complicated, consider revising functions. EDIT: Scope improved, but still weird
+
+Note that portions of the code are commented out instead of out-right deleted. This is meant to make reviewing the code easier.
+It should be deleted upon review. (Note that old code can be restored with git).
 """
 #############################################################################################################
 # case transformation definitions
@@ -180,15 +199,13 @@ ___\u001b[34m|  |\u001b[0m____\u001b[34m|  (\u001b[0m__\u001b[34m)  |\u001b[0m__
 #############################################################################################################
 # alpha validity check
 def alpha_check(string):
+    return string.isalpha()
+
+def alpha_only(string):
     '''
     Returns a string with only alphabetical characters
     @param <string> string: The string that's being checked
     return: The string with only alphabetical characters
-    '''
-    # Fix alpha check, not too sure how the original was supposed to work
-    '''
-    test_str = ''.join(filter(str.isalpha, string))
-    return test_str
     '''
     # Treat the string as a list and remove the non-alphabetical characters O(n)
     test_str = ''
@@ -223,11 +240,23 @@ def date_check(date):
     return True
 
 # character replace, return array with words with each possible combination - transformation accepts tuple with char as key and array value
-def char_transform(string, transformation):
+def char_transform(string, transformation, min_val, max_val):
+    '''
+    Creates a list of all leet code variations
+    @param <str> string: The word be converted to leet
+    @param <dict><str:str> transformation: The dictionary guide for converting to leet
+    '''
+    
+    # Early escape if there is no leet level
+    if not transformation:
+        return [string]
+    
     # turn string into array
     char = list(string)
     new_list = []
     if len(string) > 8 and transformation == leet_3:
+        ''' This function references values outside of its scope: leet_3.'''
+        # TODO: Fix this condition and possibly this limit
         print("Name is too long for this leet level!")
         exit()
     # relate char to leet equivalent in map
@@ -237,32 +266,123 @@ def char_transform(string, transformation):
     # find the cartesian product
     for t in itertools.product(*char):
         new_word = ("".join(list(t)))
-        if int(args.min) <= len(new_word) <= int(args.max):
+        if int(min_val) <= len(new_word) <= int(max_val):
+            # This comparison is weird, you're cutting before you need to cut it.
             new_list.append(new_word)
     return new_list
 
+def cart_prod_helper(array_storage, chunk_size=20, min_val=6, max_val=8):
+    """
+    Take a tempfile and returns the cartesian product in another tempfile
+    
+    Since array can be indefinitely large, tempfiles are used to store the
+    array and the product it creates. The input file is destroyed afterwards,
+    so the original is not safe for threading. Larger chunk sizes lead to faster
+    runtimes, at the cost of more memory. Feel free to modify it, but be careful.
+    
+    @param TemporaryFile array_storage: The word_array made into temp file
+    @param int chunk_size: The size of the array for cartesian multiplication (i.e. String[chunk_size] x String[chunk_size])
+    @param int min_val: The minimum size of the password generated
+    @param int max_val: The maximum size of the password generated
+    @return TemporaryFile: The product array with all the words
+    """
+    # Prep for new cart prod method
+    all_combinations = tempfile.TemporaryFile(mode="r+t")
+    line_num = 0
+    index = -1
+    chunk = []
+    array_storage.seek(0)
+    
+    while index < array_storage.tell():
+        # Track where we are in the file
+        index = array_storage.tell()
+        chunk.append(array_storage.readline()[:-1])
+        # Once we meet the chunk size, then iterate over the whole file
+        if len(chunk) >= chunk_size:
+            # Go through and take the product
+            prev = array_storage.tell()
+            array_storage.seek(0)
+            sec_chunk = []
+            
+            # Get another chunk from the file
+            for line in array_storage:
+                sec_chunk.append(line[:-1])
+                if len(sec_chunk) >= chunk_size:
+                    sec_chunk = chunk_cart_prod(chunk, sec_chunk, min_val, max_val)
+                    for part in sec_chunk:
+                        all_combinations.write(part + "\n")
+                    sec_chunk = []
+            # If the chunk isn't empty at the end, then add it to the all_comb
+            if len(sec_chunk) > 0:
+                sec_chunk = chunk_cart_prod(chunk, sec_chunk, min_val, max_val)
+                for part in sec_chunk:
+                    all_combinations.write(part + "\n")
+            # Prepare to return
+            array_storage.seek(prev)
+            line_num = 0
+    
+    # If the chunk isn't empty at the end, then add it to the all_comb
+    if len(chunk) > 0:
+        # Get another chunk from the file
+        array_storage.seek(0)
+        sec_chunk = []
+        for line in array_storage:
+            sec_chunk.append(line[:-1])
+            if len(sec_chunk) >= chunk_size:
+                sec_chunk = chunk_cart_prod(chunk, sec_chunk, min_val, max_val)
+                for part in sec_chunk:
+                    all_combinations.write(part + "\n")
+                sec_chunk = []
+        # If the chunk isn't empty at the end, then add it to the all_comb
+        if len(sec_chunk) > 0:
+            sec_chunk = chunk_cart_prod(chunk, sec_chunk, min_val, max_val)
+            for part in sec_chunk:
+                all_combinations.write(part + "\n")
+    
+    # Finally done, destroy original temp and return original
+    array_storage.close()
+    return all_combinations
 
 # cartesian product of array of arrays
-def cart_prod(arr):
+def cart_prod(arr, min_val, max_val):
     new_list = []
     temp_list = [arr, arr]
+    # This part is eating a lot of memory, you're keeping two copies of an array
+    # For long lists, this is likely where the memory issue stems from
     for t in itertools.product(*temp_list):
         new_word = ("".join(list(t)))
-        if len(new_word) < int(args.min):
+        if len(new_word) < int(min_val):
+            new_list.append(new_word)
             continue
-        elif len(new_word) >= int(args.max):
-            new_list.append(new_word[:int(args.max)])
+        elif len(new_word) >= int(max_val):
+            '''Wouldn't this be creating duplicates if the beginning is the same?'''
+            new_list.append(new_word[:int(max_val)])
         else:
             new_list.append(new_word)
     return new_list
 
+def chunk_cart_prod(chunk, file_chunk, min_val, max_val):
+    '''Used for cartesian products over chunks'''
+    new_list = []
+    temp_list = [chunk, file_chunk]
+    for t in itertools.product(*temp_list):
+        new_word = ("".join(list(t)))
+        if len(new_word) < int(min_val):
+            # Opting to add smaller words as they can become larger words later
+            new_list.append(new_word)
+            continue
+        elif len(new_word) >= int(max_val):
+            new_list.append(new_word[:int(max_val)])
+        else:
+            new_list.append(new_word)
+    return new_list
 
-def dob_transform(num_array):
+def dob_transform(num_array, min_val, max_val):
     temp = [""]
     for num in num_array:
         temp.append(num)
         temp.append(num[::-1])
-    temp = cart_prod(temp)
+    temp = cart_prod(temp, min_val, max_val)
     return temp
 
 
@@ -331,10 +451,12 @@ if not args.min:
     args.min = input("Enter minimum character length: ")
     if args.min == "":
         args.min = 6
+    min_val = int(args.min)
 if not args.max:
     args.max = input("Enter maximum character length: ")
     if args.max == "":
         args.max = 13
+    max_val = int(args.max)
 
 # set all to lowercase
 fname = str.lower(fname)
@@ -378,16 +500,91 @@ print("Generating wordlist...")
 start_time = time.time()
 # cleanup / separate data / join words into array / begin manipulation
 word_array = ["", fname, lname]
-word_array = cart_prod(word_array)
+word_array = cart_prod(word_array, min_val, max_val)
+word_array = list(set(word_array))
 # reverse and cart_product of date, filter number, and filter unique values
-word_array.extend(set(filter(lambda x: x != "", dob_transform(dob.split("/")))))
+word_array.extend(set(filter(lambda x: x != "", dob_transform(dob.split("/"), min_val, max_val))))
+# Make the first temp file for handling long arrays
+array_storage = tempfile.TemporaryFile("r+t")
+for word in word_array:
+    array_storage.write(word + "\n")
 # handle extra words, if digit string is present, will flip the digits as well
 extras = info.replace(" ", "").split(",")
 for i in range(len(extras)):
+    array_storage.write(extras[i] + "\n")
     if extras[i].isdigit():
-        extras.append(extras[i][::-1])
-word_array.extend(extras)
+        array_storage.write(extras[i][::-1] + "\n")
+print("List of words built, now getting combinations")
+# word_array.extend(extras)
 
+# Early exit, testing only. Uncomment to see what I mean.
+# print(word_array)
+# exit()
+
+# New early exit
+#array_storage.seek(0)
+#for line in array_storage:
+#    print(line, end="")
+#exit()
+
+"""
+Order of operations is being changed.
+Original: Leet swap => Case swap => Cartesian product => File write
+New: Cartesian product => Leet swap => Case Swap => File write
+
+Both should have the same result. The cartesian product is done earlier to
+reduce computational need, especially since the combinations are going to 
+be the same pretty much throughout. I don't see too much wrong with this
+approach, but if I'm incorrect, please let me know. -NG
+"""
+
+# Regular cartesian product as a tempfile
+array_storage.seek(0)
+word_comb = cart_prod_helper(array_storage, 20, min_val, max_val)
+print("List of combinations built. Now translating to leet")
+
+# Check to see if word_comb is working
+#word_comb.seek(0)
+#for line in word_comb:
+#    print(line, end="")
+#exit()
+
+# Leet swap
+leet_list = tempfile.TemporaryFile("r+t")
+word_comb.seek(0)
+for line in word_comb:
+    leet_variants = char_transform(line[:-1], leet_set, min_val, max_val)
+    for variant in leet_variants:
+        leet_list.write(variant + "\n")
+word_comb.close()
+print("Leet list translated. Now transforming cases")
+
+# Check to see if leet_list is working
+#leet_list.seek(0)
+#for line in leet_list:
+#    print(line, end="")
+#exit()
+
+# Case swap
+case_list = tempfile.TemporaryFile("r+t")
+leet_list.seek(0)
+previous = ""
+for line in leet_list:
+    case_variants = char_transform(line[:-1], case_set, min_val, max_val)
+    for variant in case_variants:
+        if variant != previous:
+            case_list.write(variant + "\n")
+        previous = variant
+leet_list.close()
+print("Cases finalized. Proceeding to save list...")
+
+# Check to see if case_list is working
+# case_list.seek(0)
+# for line in case_list:
+    # print(line, end="")
+# exit()
+
+'''
 # leet swap
 if leet_num != -1:
     # empty temp_arr
@@ -406,10 +603,12 @@ if case_bool:
     word_array.extend(temp_arr)
 
 # regular cartesian product
-word_array = cart_prod(word_array)
+word_array = cart_prod(word_array, min_val, max_val)
 
 # filter out empty strings and uniques
+# This handles duplicates, but can waste quite a bit of memory and some time
 word_array = set(filter(lambda x: x != "", word_array))
+'''
 
 # write to file
 if not filename:
@@ -417,10 +616,21 @@ if not filename:
 
 # create file with write permissions
 file = open(filename, "w+")
+
+# Copy the temp file
+# Note that this could be optimized, but it should do for now
+case_list.seek(0)
+for line in case_list:
+    if min_val <= len(line[:-1]) and len(line[:-1]) <= max_val:
+        file.write(line)
+file.close()
+
+'''
 # write each word from array to file
 for word in word_array:
     file.write(word + "\r\n")
 file.close()
+'''
 
 print("It took {:.3f} seconds to generate a wordlist of length {}".format((time.time() - start_time), len(word_array)))
 print("New file created in present directory: " + filename)
